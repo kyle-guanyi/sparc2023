@@ -5,7 +5,7 @@ import { RdsSnapshotExportPipelineStack, RdsEventId, RdsSnapshotType } from '../
 
 const app = new cdk.App();
 new RdsSnapshotExportPipelineStack(app, 'RdsSnapshotExportToS3Pipeline', {
-  dbName: '<sparc-db>',
+  dbName: 'sparc-db',
   rdsEvents:
     [
       {
@@ -21,5 +21,5 @@ new RdsSnapshotExportPipelineStack(app, 'RdsSnapshotExportToS3Pipeline', {
         rdsSnapshotType: RdsSnapshotType.DB_BACKUP_SNAPSHOT
       }
     ],
-  s3BucketName: '<sparc-db-rds-s3-bucket>',
+  s3BucketName: 'sparc-automated-bucket',
 });
