@@ -5,7 +5,7 @@ import io
 
 
 """
-    Create a DynamoDB using given table nam\
+    Create a DynamoDB using given table name
 """
 def create_dynamodb_table(table_name):
     try:
@@ -26,8 +26,8 @@ def create_dynamodb_table(table_name):
                 }
             ],
             ProvisionedThroughput={
-                'ReadCapacityUnits': 5,
-                'WriteCapacityUnits': 5
+                'ReadCapacityUnits': 25,
+                'WriteCapacityUnits': 50
             }
         )
         table.wait_until_exists()
@@ -37,12 +37,12 @@ def create_dynamodb_table(table_name):
 
 """
     Read compressed data from S3 and export it to Data Frame
+    bucket_name is the S3 bucket name
+    object_name is the folder/object name of for corresponding snapshot
 """
-def export_s3_to_dataframe(bucket_name):
+def export_s3_to_dataframe(bucket_name, object_name):
     try:
         s3_client = boto3.client('s3')
-        # Create a new DynamoDB table
-        #create_dynamodb_table(dynamodb_table_name)
 
         # Get the data from the S3 bucket
         bucket = s3_client.list_objects_v2(Bucket=bucket_name)
@@ -50,7 +50,8 @@ def export_s3_to_dataframe(bucket_name):
         dataSource = None
         for obj in bucket['Contents']:
             key = obj['Key']
-            if ".gz.parquet" in key:
+            if object_name in key and ".gz.parquet" in key:
+                #print(obj)
                 dataSource = s3_client.get_object(Bucket=bucket_name, Key=key)
                 break
 
@@ -81,9 +82,6 @@ def dataframe_to_dynamoDB(df, dynamodb_table_name):
     if df is None:
         print("No DataFrame is saved from S3.")
         return 1
-    
-    # Convert the DataFrame to a list of dictionaries
-    data_list = df.to_dict(orient='records')
 
     # Create a DynamoDB client
     dynamodb = boto3.resource('dynamodb')
@@ -91,10 +89,10 @@ def dataframe_to_dynamoDB(df, dynamodb_table_name):
     # Get the DynamoDB table
     table = dynamodb.Table(dynamodb_table_name)
 
-    # Store each item (dictionary) in the DynamoDB table
-    count = 0
-    for item in data_list:
-        table.put_item(Item=item)
+    # Store data in the DynamoDB table in batch
+    with table.batch_writer() as batch:
+        for i, row in df.iterrows():
+            batch.put_item(Item=row.to_dict())
 
     print("Export to DynamoDB completed successfully.")
     return 0
@@ -102,6 +100,6 @@ def dataframe_to_dynamoDB(df, dynamodb_table_name):
 if __name__ == "__main__":
     s3_bucket_name = "testsharon1"
     dynamodb_table_name = "testdynamo"
-    df = export_s3_to_dataframe(s3_bucket_name)
+    df = export_s3_to_dataframe(s3_bucket_name, "rdstos3test2/")
     create_dynamodb_table(dynamodb_table_name)
     dataframe_to_dynamoDB(df, dynamodb_table_name)
