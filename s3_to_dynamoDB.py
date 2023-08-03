@@ -18,13 +18,13 @@ def create_dynamodb_table(table_name):
             TableName=table_name,
             AttributeDefinitions = [
                 {
-                    'AttributeName': 'primary_key',
+                    'AttributeName': 'pk',
                     'AttributeType': 'N'
                 }
             ],
             KeySchema=[
                 {
-                    'AttributeName': 'primary_key',
+                    'AttributeName': 'pk',
                     'KeyType': 'HASH'
                 }
             ],
@@ -71,6 +71,7 @@ def export_s3_to_dataframe(bucket_name, object_name):
         # Now you can work with the DataFrame 'df'
         print(df.head())
         print(len(df.index))
+        print("\n")
         
         print("Export to DataFrame completed successfully.")
         return df
@@ -157,7 +158,7 @@ def get_user_input_datetime(folder_names):
     val = input("Enter the date and time of the S3 backup (in format of YYYY-MM-DD-HH): ")
 
     while not re.match("[0-9]{4}-[0-9]{2}-[0-9]{2}-[0-9]{2}", val):
-        print("Error: input format is invalid! Please try again!")
+        print("Error: input format is invalid! Please try again!\n")
         val = input("Enter the date and time of the S3 backup (in format of YYYY-MM-DD-HH): ")
     
     print("\n")
@@ -171,6 +172,8 @@ def get_user_input_datetime(folder_names):
 
 
 if __name__ == "__main__":
+
+    print("Welcome! You can choose which S3 backup object to read into DynamoDB here!")
     
     s3_bucket_name = "kevin-testbucket-sparc"
     s3_folders = get_s3_backups_date_range(s3_bucket_name)
@@ -183,10 +186,10 @@ if __name__ == "__main__":
         print_s3_backups_date_range(s3_folders)
         object_name = get_user_input_datetime(s3_folders)
     
-    dynamodb_table_name = object_name
+    dynamodb_table_name = object_name[:-1]  # exclude "/"
     df = export_s3_to_dataframe(s3_bucket_name, object_name)
     create_dynamodb_table(dynamodb_table_name)
     dataframe_to_dynamoDB(df, dynamodb_table_name)
-    retrieve_from_dynamoDB(dynamodb_table_name)
+    #retrieve_from_dynamoDB(dynamodb_table_name)
 
 
