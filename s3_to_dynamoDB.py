@@ -2,26 +2,29 @@ import boto3
 import pandas as pd
 import pyarrow.parquet as pq
 import io
+import re
 
+dynamodb = boto3.resource('dynamodb')
+dynamodb_client = boto3.client('dynamodb')
+s3_client = boto3.client('s3')
 
 """
     Create a DynamoDB using given table name
 """
 def create_dynamodb_table(table_name):
     try:
-        dynamodb = boto3.resource('dynamodb')
-
+        
         table = dynamodb.create_table(
             TableName=table_name,
             AttributeDefinitions = [
                 {
-                    'AttributeName': 'pk',
+                    'AttributeName': 'primary_key',
                     'AttributeType': 'N'
                 }
             ],
             KeySchema=[
                 {
-                    'AttributeName': 'pk',
+                    'AttributeName': 'primary_key',
                     'KeyType': 'HASH'
                 }
             ],
@@ -41,9 +44,11 @@ def create_dynamodb_table(table_name):
     object_name is the folder/object name of for corresponding snapshot
 """
 def export_s3_to_dataframe(bucket_name, object_name):
-    try:
-        s3_client = boto3.client('s3')
 
+    print(f"Exporting S3 backup: {object_name}")
+
+    try:
+        
         # Get the data from the S3 bucket
         bucket = s3_client.list_objects_v2(Bucket=bucket_name)
 
@@ -83,9 +88,6 @@ def dataframe_to_dynamoDB(df, dynamodb_table_name):
         print("No DataFrame is saved from S3.")
         return 1
 
-    # Create a DynamoDB client
-    dynamodb = boto3.resource('dynamodb')
-
     # Get the DynamoDB table
     table = dynamodb.Table(dynamodb_table_name)
 
@@ -97,9 +99,94 @@ def dataframe_to_dynamoDB(df, dynamodb_table_name):
     print("Export to DynamoDB completed successfully.")
     return 0
 
+
+"""
+    Retrieve 10 items (in random order) from DynamoDB
+"""
+def retrieve_from_dynamoDB(dynamodb_table_name):
+    
+    response = dynamodb_client.describe_table(
+    TableName=dynamodb_table_name
+    )
+    print(response, "\n")
+
+    table = dynamodb.Table(dynamodb_table_name)
+
+    response = table.scan(Limit=10)
+    print(response["Items"], "\n")
+
+
+"""
+    Return backup folder names in given S3 bucket
+    folder names are in ascending order, based on created time
+"""
+def get_s3_backups_date_range(bucket_name):
+    result = s3_client.list_objects(Bucket=bucket_name, Prefix='sparc-export', Delimiter='/')
+    folder_names = []
+    for o in result.get('CommonPrefixes'):
+        folder_names.append(o.get('Prefix'))
+    return folder_names
+
+
+"""
+    Print the first 3 folders and last 3 folders in given folder_names list
+"""
+def print_s3_backups_date_range(folder_names):
+    print("S3 backups date range shown below (backup named as YYYY-MM-DD-HH-MM-SS):")
+    length = len(folder_names)
+    for i in range(3):
+        if i < length:
+            print(folder_names[i])
+    if length > 3:
+        for i in range(3):
+            print(".")
+        for i in range(length - 3, length):
+            if i > 2:
+                print(folder_names[i])
+
+    print("\n")
+
+
+"""
+    Get user input of the date and time of the S3 backup,
+    find the full name of the folder in folder_names
+    and return the full name.
+"""
+def get_user_input_datetime(folder_names):
+
+    val = input("Enter the date and time of the S3 backup (in format of YYYY-MM-DD-HH): ")
+
+    while not re.match("[0-9]{4}-[0-9]{2}-[0-9]{2}-[0-9]{2}", val):
+        print("Error: input format is invalid! Please try again!")
+        val = input("Enter the date and time of the S3 backup (in format of YYYY-MM-DD-HH): ")
+    
+    print("\n")
+    res = None
+    
+    for f in folder_names:
+        if val in f:
+            res = f
+
+    return res
+
+
 if __name__ == "__main__":
-    s3_bucket_name = "testsharon1"
-    dynamodb_table_name = "testdynamo"
-    df = export_s3_to_dataframe(s3_bucket_name, "rdstos3test2/")
+    
+    s3_bucket_name = "kevin-testbucket-sparc"
+    s3_folders = get_s3_backups_date_range(s3_bucket_name)
+    print_s3_backups_date_range(s3_folders)
+    object_name = get_user_input_datetime(s3_folders)
+
+    while not object_name:
+        print("Error: invalid date time. Please see the date range of S3 backups below and try again!")
+        print("\n")
+        print_s3_backups_date_range(s3_folders)
+        object_name = get_user_input_datetime(s3_folders)
+    
+    dynamodb_table_name = object_name
+    df = export_s3_to_dataframe(s3_bucket_name, object_name)
     create_dynamodb_table(dynamodb_table_name)
     dataframe_to_dynamoDB(df, dynamodb_table_name)
+    retrieve_from_dynamoDB(dynamodb_table_name)
+
+
