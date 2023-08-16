@@ -4,15 +4,16 @@ import pyarrow.parquet as pq
 import io
 import re
 
-dynamodb = boto3.resource('dynamodb')
+
 dynamodb_client = boto3.client('dynamodb')
 s3_client = boto3.client('s3')
 
 """
     Create a DynamoDB using given table name
 """
-def create_dynamodb_table(table_name):
+def create_dynamodb_table(table_name, region):
     try:
+        dynamodb = boto3.resource('dynamodb', region_name=region)
         
         table = dynamodb.create_table(
             TableName=table_name,
@@ -90,6 +91,7 @@ def dataframe_to_dynamoDB(df, dynamodb_table_name):
         return 1
 
     # Get the DynamoDB table
+    dynamodb = boto3.resource('dynamodb', region_name=region)
     table = dynamodb.Table(dynamodb_table_name)
 
     # Store data in the DynamoDB table in batch
@@ -110,6 +112,7 @@ def retrieve_from_dynamoDB(dynamodb_table_name):
     TableName=dynamodb_table_name
     )
     print(response, "\n")
+
 
     table = dynamodb.Table(dynamodb_table_name)
 
@@ -175,7 +178,9 @@ if __name__ == "__main__":
 
     print("Welcome! You can choose which S3 backup object to read into DynamoDB here!")
     
-    s3_bucket_name = "kevin-testbucket-sparc"
+    region = "us-west-2"
+    s3_bucket_name = "sparc-db-cross-region-replication-bucket-us-west-2"
+
     s3_folders = get_s3_backups_date_range(s3_bucket_name)
     print_s3_backups_date_range(s3_folders)
     object_name = get_user_input_datetime(s3_folders)
@@ -188,8 +193,8 @@ if __name__ == "__main__":
     
     dynamodb_table_name = object_name[:-1]  # exclude "/"
     df = export_s3_to_dataframe(s3_bucket_name, object_name)
-    create_dynamodb_table(dynamodb_table_name)
+    create_dynamodb_table(dynamodb_table_name, region)
     dataframe_to_dynamoDB(df, dynamodb_table_name)
-    #retrieve_from_dynamoDB(dynamodb_table_name)
+    #retrieve_from_dynamoDB(dynamodb_table_name, region)
 
 
