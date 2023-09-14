@@ -1,4 +1,10 @@
-# sparc2023
+# AWS Data Restore
+
+# Demo Video
+
+[![AWS Data Restore Demo Video](https://img.youtube.com/vi/xbYQuewYPh4/0.jpg)](https://www.youtube.com/watch?v=xbYQuewYPh4)
+
+# Architectural Diagram
 
 ![alt text](https://github.com/kyle-guanyi/sparc2023/blob/main/public/Data%20Restore%20Architectural%20Diagram.png?raw=true)
 
