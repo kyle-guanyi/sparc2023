@@ -6,7 +6,11 @@
 
 # Architectural Diagram
 
-![alt text](https://github.com/kyle-guanyi/sparc2023/blob/main/public/Data%20Restore%20Architectural%20Diagram.png?raw=true)
+![Architectural Diagram](https://github.com/kyle-guanyi/sparc2023/blob/main/public/Data%20Restore%20Architectural%20Diagram.png?raw=true)
+
+# Project Documentation
+
+[Project Documentation](https://github.com/kyle-guanyi/sparc2023/blob/main/public/AWS%20Data%20Restore%20Documentation.pdf)
 
 This repository holds some of the tools we used in our architectural diagram above:
 - Python script that populates our MySQL RDS database via TMDB API (import_to_RDS.py)
